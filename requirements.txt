@@ -2,8 +2,11 @@ fastapi
 uvicorn
 python-dotenv
 pydantic
+pydantic[email]
+email-validator
 requests
 langchain
+langchain-core
 langchain-community
 langchain-groq
 pypdf

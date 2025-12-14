@@ -1,17 +1,23 @@
 # backend/main.py
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import auth, profile, chat, history, agent_stream, upload
 
 app = FastAPI()
 
-# Simplified CORS middleware - WORKING VERSION
+# --- CORS CONFIGURATION ---
+# We allow ["*"] (all origins) to ensure your deployed frontend can communicate 
+# with the backend without errors. In a strict production environment, 
+# you would replace "*" with your specific frontend URL.
+origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # allow only this origin (adjust if needed)
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allows all headers
 )
 
 # Include routers
@@ -28,8 +34,13 @@ def root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "jwt": "configured"}
+    """
+    Health check endpoint for Render to verify the service is up.
+    """
+    return {"status": "healthy", "jwt_configured": True}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # The port must be dynamic for Render (os.getenv("PORT"))
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
