@@ -12,10 +12,9 @@ PyJWT
 gunicorn
 httpx
 idna
+idna
 jsonpatch
 jsonpointer
-langchain-core
-langchain-text-splitters
 langsmith
 motor
 multidict
