@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+passlib[bcrypt]
+PyJWT
+requests
+langchain
+langchain-groq
+pypdf
+gunicorn
