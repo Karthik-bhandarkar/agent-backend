@@ -5,10 +5,10 @@ pydantic
 pydantic[email]
 email-validator
 requests
-langchain
-langchain-core
-langchain-community
-langchain-groq
+langchain>=0.2.0,<0.3.0
+langchain-core>=0.2.0,<0.3.0
+langchain-community>=0.2.0,<0.3.0
+langchain-groq>=0.1.0
 pypdf
 passlib[bcrypt]
 PyJWT
