@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 python-multipart
 python-dotenv
 pydantic
@@ -17,3 +17,4 @@ gunicorn
 pymongo
 motor
 httpx
+websockets
