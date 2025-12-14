@@ -4,6 +4,7 @@ python-dotenv
 pydantic
 requests
 langchain
+langchain-community
 langchain-groq
 pypdf
 passlib[bcrypt]
