@@ -1,3 +1,14 @@
+fastapi
+uvicorn
+python-dotenv
+pydantic
+requests
+langchain
+langchain-groq
+pypdf
+passlib[bcrypt]
+PyJWT
+gunicorn
 httpx
 idna
 jsonpatch
