@@ -5,10 +5,12 @@ User wellness profile management routes.
 Handles creating, updating, and fetching the user's health profile, including
 automatic BMI calculation and normalizing alternate field names (e.g., height vs height_cm).
 """
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 from typing import Optional, Any, Dict
-from database import save_profile, update_user_profile_complete, get_user_by_id, get_profile as db_get_profile
+from db.profiles_repo import save_profile, get_profile as db_get_profile
+from db.users_repo import update_user_profile_complete, get_user_by_id
+from core.deps import get_current_user
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -38,7 +40,7 @@ class ProfileUpdate(BaseModel):
 @router.post("/setup")
 def setup_profile(
     request: Request,
-    user_id: Optional[str] = None,  # Accept string user_id (objectId string)
+    user_id: str = Depends(get_current_user),
     profile_data: ProfileUpdate = None,
 ):
     """
@@ -48,20 +50,15 @@ def setup_profile(
 
     Args:
         request: The raw FastAPI request.
-        user_id: User identifier passed as a query parameter.
+        user_id: User identifier injected via JWT token.
         profile_data: JSON body with profile fields.
 
     Returns:
         dict: A success message and the updated profile dictionary.
 
     Raises:
-        HTTPException(400): if `user_id` query parameter is missing.
         HTTPException(404): if the user is not found in the database.
     """
-
-    # Validate presence of user_id
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id (query param) is required")
 
     # Ensure user exists (optional safety)
     user = get_user_by_id(user_id)
@@ -175,14 +172,14 @@ def setup_profile_body(data: Dict):
     }
 
 @router.get("/get")
-def get_profile(user_id: str):
+def get_profile(user_id: str = Depends(get_current_user)):
     """
     Fetch a user's health profile.
 
     Route: GET /profile/get
 
     Args:
-        user_id: User identifier passed as a query parameter.
+        user_id: User identifier injected via JWT token.
 
     Returns:
         dict: The user's profile data, or a dict with `profile: None` if not set.

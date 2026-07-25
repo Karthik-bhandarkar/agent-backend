@@ -9,7 +9,7 @@ Also serves as the launch script for the uvicorn development server.
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth, profile, chat, history, agent_stream, upload
+from routers import auth, profile, chat, history, agent_stream, upload, google_auth
 
 app = FastAPI()
 
@@ -36,6 +36,7 @@ app.include_router(chat.router)
 app.include_router(history.router)
 app.include_router(agent_stream.router)
 app.include_router(upload.router)
+app.include_router(google_auth.router)
 
 @app.get("/")
 def root():

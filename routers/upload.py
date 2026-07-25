@@ -8,7 +8,7 @@ stores the extracted text in the user's profile for agents to analyze.
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from pypdf import PdfReader
 from io import BytesIO
-from database import save_profile, get_profile
+from db.profiles_repo import save_profile, get_profile
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 

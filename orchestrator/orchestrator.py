@@ -32,7 +32,11 @@ from agents.diet_agent import run_diet_agent
 from agents.fitness_agent import run_fitness_agent
 from agents.lifestyle_agent import run_lifestyle_agent
 from agents.output_synthesizer import synthesize_output
-from database import get_profile, append_conversation_turn
+from db.profiles_repo import get_profile
+from db.conversations_repo import append_conversation_turn
+from core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 # -------------------------------------------------------------------
@@ -178,7 +182,7 @@ def process_query_generator(user_id: str, message: str):
       {"type": "log", "agent": "...", "message": "..."}
       {"type": "final", "response": "...", "agents_used": [...]}
     """
-    print(f"DEBUG: process_query_generator started for {user_id}")
+    logger.info(f"DEBUG: process_query_generator started for {user_id}")
     reasoning_logs = []
 
     def log_event(agent: str, message: str):
@@ -190,9 +194,9 @@ def process_query_generator(user_id: str, message: str):
     yield log_event("System", "Loading user profile...")
     try:
         profile = get_profile(user_id)
-        print(f"DEBUG: Profile loaded: {profile is not None}")
+        logger.info(f"DEBUG: Profile loaded: {profile is not None}")
     except Exception as e:
-        print(f"DEBUG: Error loading profile: {e}")
+        logger.error(f"DEBUG: Error loading profile: {e}")
         yield log_event("System", f"Error loading profile: {e}")
         return
 
@@ -206,9 +210,9 @@ def process_query_generator(user_id: str, message: str):
     yield log_event("System", "Classifying intent...")
     try:
         intent = classify_intent(message)
-        print(f"DEBUG: Intent classified: {intent}")
+        logger.info(f"DEBUG: Intent classified: {intent}")
     except Exception as e:
-        print(f"DEBUG: Error classifying intent: {e}")
+        logger.error(f"DEBUG: Error classifying intent: {e}")
         yield log_event("System", "Error classifying intent, proceeding as wellness.")
         intent = {"is_wellness": True}
 
@@ -255,7 +259,7 @@ def process_query_generator(user_id: str, message: str):
         # Ask Supervisor what to do next
         yield log_event("Supervisor", "Deciding next step...")
         next_agent = supervisor(message, profile, state)
-        print(f"DEBUG: Supervisor decided -> {next_agent}")
+        logger.info(f"DEBUG: Supervisor decided -> {next_agent}")
 
         # NOTE: FINISH is the exit condition returned by the supervisor when it
         # determines no further specialist agents are needed to satisfy the query.
@@ -333,7 +337,7 @@ def process_query_generator(user_id: str, message: str):
         agents_used=agents_used,
         reasoning_logs=reasoning_logs,
     )
-    print("DEBUG: Pipeline finished, sending final response")
+    logger.info("DEBUG: Pipeline finished, sending final response")
     yield {
         "type": "final", 
         "response": final_response, 
