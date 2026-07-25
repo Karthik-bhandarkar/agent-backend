@@ -1,4 +1,12 @@
 # backend/agents/supervisor_agent.py
+"""
+Agent responsible for routing decisions in the multi-agent orchestration.
+
+Reads the user's message, their profile, the conversation history, and the
+current state (which agents have already run) to decide the next step. It
+does not write to the state dictionary itself; it returns the name of the next
+agent to run, or "FINISH" to terminate the loop.
+"""
 
 import json
 from typing import Optional
@@ -61,8 +69,17 @@ supervisor_chain = supervisor_prompt | llm | parser
 
 def supervisor(user_message: str, profile: Optional[dict], state: dict) -> str:
     """
-    Supervisor LLM using LangChain LCEL Chain.
-    Returns: Agent Name or "FINISH"
+    Invoke the supervisor LLM chain to determine the next agent.
+
+    Args:
+        user_message: The raw text of the user's input.
+        profile: The user's health profile (metrics, goals, conditions).
+        state: The current orchestration state containing outputs from any
+            agents that have already run during this turn.
+
+    Returns:
+        str: The exact name of the next agent to invoke (e.g., "DietAgent"),
+        or "FINISH" if the response is complete.
     """
     conversation_history = state.get("conversation_history", "No previous conversation yet.")
     intent = state.get("intent", {})
@@ -89,5 +106,7 @@ def supervisor(user_message: str, profile: Optional[dict], state: dict) -> str:
         return "FINISH"
 
     except Exception as e:
+        # NOTE: JSON parsing failures often end up here when the LLM wraps
+        # its JSON output in verbose text. We default to FINISH to avoid crashing.
         print(f"DEBUG: Supervisor Error: {e}")
         return "FINISH"

@@ -1,7 +1,28 @@
+# backend/agents/fitness_agent.py
+"""
+Agent responsible for generating exercise and fitness recommendations.
+
+Reads the current orchestration state and the user's health profile to provide
+tailored workout plans and posture advice, accounting for safety constraints
+identified by prior agents. Its output is captured by the orchestrator and
+written into the shared state dictionary under the `FitnessAgent` key.
+"""
 from agents.groq_client import get_llm
 llm = get_llm()
 
 def run_fitness_agent(state, profile):
+    """
+    Invoke the Fitness Agent LLM chain.
+
+    Args:
+        state: The current orchestration state containing outputs from any
+            agents that have already run during this turn.
+        profile: The user's health profile (metrics, goals, conditions).
+
+    Returns:
+        str: A concise markdown section analyzing how other agents' findings
+        affect fitness, followed by a specific workout plan.
+    """
     prompt = f"""
 You are the FitnessAgent in a Digital Wellness multi-agent system.
 

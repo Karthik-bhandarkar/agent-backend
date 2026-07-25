@@ -2,3 +2,5 @@
 package-lock.json
 venv
 test.ps1
+__pycache__/
+*.pyc

@@ -1,4 +1,10 @@
 # backend/routers/agent_stream.py
+"""
+WebSocket endpoint for real-time agent streaming.
+
+Accepts a connection, reads the initial query, and streams orchestrator
+progress events (from process_query_generator) live to the frontend.
+"""
 from fastapi import APIRouter, WebSocket
 import asyncio
 from typing import List, Dict, Any
@@ -9,6 +15,22 @@ from orchestrator.orchestrator import process_query_generator
 
 @router.websocket("/ws/process-query")
 async def process_query_ws(websocket: WebSocket):
+    """
+    Stream orchestrator events to the client over a WebSocket connection.
+
+    Route: WS /ws/process-query
+    
+    Expected Initial Message:
+        JSON object containing `user_id` and `query`.
+
+    Yields:
+        JSON objects representing either intermediate logs (`type: agent`) or
+        the final synthesized response (`type: final`).
+
+    Error Cases:
+        - Missing user_id: Sends a JSON error message and closes the connection.
+        - Unhandled exception: Sends a JSON error message containing the stack trace.
+    """
     await websocket.accept()
     print("WS Connected")
     try:

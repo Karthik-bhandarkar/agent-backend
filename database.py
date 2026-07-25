@@ -1,7 +1,12 @@
 # backend/database.py
-# MongoDB-backed drop-in replacement for the mock in-memory DB.
-# Keeps the same function names used by your app but avoids crashing
-# the server when the DB is unreachable. Provides clear runtime errors.
+"""
+MongoDB data access layer.
+
+Provides a robust connection to MongoDB that catches connection failures at
+startup and logs them instead of crashing the server. This ensures the FastAPI
+app starts successfully even if the database is temporarily unreachable,
+allowing health checks to pass and graceful error handling on subsequent requests.
+"""
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime
@@ -68,7 +73,16 @@ def _ensure_collection(coll, name: str = "collection"):
 def save_user(user_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Save a new user and return the full user record (including its id).
-    Raises ValueError for duplicate email, RuntimeError if DB is unavailable.
+
+    Args:
+        user_data: Dictionary containing the new user's information.
+
+    Returns:
+        dict: The inserted user record, with the `id` field converted to a string.
+
+    Raises:
+        ValueError: if the email is already registered.
+        RuntimeError: if the database is unavailable.
     """
     coll = _ensure_collection(users_collection, "users")
 
@@ -88,7 +102,15 @@ def save_user(user_data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
-    """Return the user dict for this email, or None if not found."""
+    """
+    Retrieve a user record by their email address.
+
+    Args:
+        email: The email string to search for.
+
+    Returns:
+        dict | None: The user dictionary if found, otherwise None.
+    """
     coll = _ensure_collection(users_collection, "users")
     user = coll.find_one({"email": email})
     if not user:
@@ -107,8 +129,13 @@ def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
 
 def get_user_by_id(user_id: Any) -> Optional[Dict[str, Any]]:
     """
-    Return the user dict for this user_id (string or ObjectId), or None if not found.
-    Accepts either the string form of ObjectId or the literal ObjectId.
+    Retrieve a user record by their unique ID.
+
+    Args:
+        user_id: The unique identifier for the user (accepts string or ObjectId).
+
+    Returns:
+        dict | None: The user dictionary if found, otherwise None.
     """
     coll = _ensure_collection(users_collection, "users")
 
@@ -137,8 +164,14 @@ def get_user_by_id(user_id: Any) -> Optional[Dict[str, Any]]:
 
 def update_user_profile_complete(user_id: Any, profile_complete: bool) -> bool:
     """
-    Update a user's profile_complete status.
-    Returns True if successful, False if user not found.
+    Update a user's profile_complete status flag.
+
+    Args:
+        user_id: The unique identifier for the user.
+        profile_complete: Boolean indicating whether the profile is complete.
+
+    Returns:
+        bool: True if the user was found and updated successfully, False otherwise.
     """
     coll = _ensure_collection(users_collection, "users")
 
@@ -159,8 +192,14 @@ def update_user_profile_complete(user_id: Any, profile_complete: bool) -> bool:
 
 def save_profile(user_id: Any, profile_data: Dict[str, Any]) -> None:
     """
-    Create or update a profile for the given user_id.
-    Stores profile_data in profiles_collection with user_id (string).
+    Create or update a health profile for the given user.
+
+    Args:
+        user_id: The unique identifier for the user.
+        profile_data: Dictionary containing health metrics and goals.
+
+    Raises:
+        ValueError: if `user_id` is None.
     """
     coll = _ensure_collection(profiles_collection, "profiles")
 
@@ -180,8 +219,13 @@ def save_profile(user_id: Any, profile_data: Dict[str, Any]) -> None:
 
 def get_profile(user_id: Any) -> Dict[str, Any]:
     """
-    Return the profile dict for this user_id.
-    If no profile exists, return an empty dict.
+    Retrieve the health profile for a specific user.
+
+    Args:
+        user_id: The unique identifier for the user.
+
+    Returns:
+        dict: The user's profile data, or an empty dict if none exists.
     """
     coll = _ensure_collection(profiles_collection, "profiles")
     if user_id is None:
@@ -206,13 +250,14 @@ def append_conversation_turn(
     reasoning_logs: List[Dict[str, Any]] = None,
 ) -> None:
     """
-    Store one conversation turn for this user:
-    - timestamp
-    - user_message
-    - assistant_response
-    - agents_used
-    - reasoning_logs (optional)
-    Keeps turns in an array per user_id doc.
+    Store a single conversation turn in the user's history.
+
+    Args:
+        user_id: The unique identifier for the user.
+        user_message: The raw text of the user's input.
+        assistant_response: The final Markdown report from the synthesizer.
+        agents_used: List of agent names that contributed to the response.
+        reasoning_logs: Optional list of intermediate logging events.
     """
     coll = _ensure_collection(conversation_collection, "conversation_turns")
     uid = str(user_id)
@@ -233,8 +278,13 @@ def append_conversation_turn(
 
 def get_conversation_history(user_id: Any) -> List[Dict[str, Any]]:
     """
-    Return all stored conversation turns for this user.
-    Each item has: timestamp, user_message, assistant_response, agents_used.
+    Retrieve all stored conversation turns for a user.
+
+    Args:
+        user_id: The unique identifier for the user.
+
+    Returns:
+        list: A list of dictionaries representing the conversation turns.
     """
     coll = _ensure_collection(conversation_collection, "conversation_turns")
     uid = str(user_id)
@@ -258,8 +308,14 @@ def get_conversation_history(user_id: Any) -> List[Dict[str, Any]]:
 
 def delete_conversation_turn(user_id: Any, turn_id: str) -> bool:
     """
-    Remove a specific turn by its ID.
-    Returns True if modified.
+    Remove a specific conversation turn from a user's history by its ID.
+
+    Args:
+        user_id: The unique identifier for the user.
+        turn_id: The unique identifier for the specific conversation turn.
+
+    Returns:
+        bool: True if the turn was successfully deleted, False otherwise.
     """
     coll = _ensure_collection(conversation_collection, "conversation_turns")
     uid = str(user_id)

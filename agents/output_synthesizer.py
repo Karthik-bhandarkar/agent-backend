@@ -1,10 +1,28 @@
+# backend/agents/output_synthesizer.py
+"""
+Agent responsible for merging all specialist outputs into a final report.
+
+Reads the user's original message and the complete orchestration state
+(containing outputs from all agents that ran this turn) to generate a
+clean, structured Markdown response. Its output is returned by the
+orchestrator and typically written to the `final_response` key.
+"""
 from agents.groq_client import get_llm
 
 llm = get_llm()
 
 def synthesize_output(state: dict, message: str) -> str:
     """
-    Generate a SHORT, SIMPLE, USER-FRIENDLY summary that answers the User's Message.
+    Invoke the Synthesizer Agent LLM chain.
+
+    Args:
+        state: The complete orchestration state containing all specialist
+            agent outputs from this turn.
+        message: The raw text of the user's input.
+
+    Returns:
+        str: A professional Markdown-formatted health report combining all
+        agent insights and answering the user's question directly.
     """
 
     prompt = f"""

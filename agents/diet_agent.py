@@ -1,3 +1,12 @@
+# backend/agents/diet_agent.py
+"""
+Agent responsible for generating dietary and nutritional recommendations.
+
+Reads the current orchestration state (including the outputs of any previously
+run agents) and the user's health profile to generate personalized food advice.
+Its output is captured by the orchestrator and written into the shared state
+dictionary under the `DietAgent` key for downstream agents to reference.
+"""
 from agents.groq_client import get_llm
 from typing import Optional
 
@@ -5,9 +14,16 @@ llm = get_llm()
 
 def run_diet_agent(state: dict, profile: Optional[dict]) -> str:
     """
-    Give SHORT, practical diet suggestions.
-    If profile is provided, use it to personalize.
-    Never ask follow-up questions here.
+    Invoke the Diet Agent LLM chain.
+
+    Args:
+        state: The current orchestration state containing outputs from any
+            agents that have already run during this turn.
+        profile: The user's health profile (metrics, goals, conditions).
+
+    Returns:
+        str: A short, practical markdown section containing a critique of
+        prior findings and a specific nutritional plan.
     """
 
     prompt = f"""

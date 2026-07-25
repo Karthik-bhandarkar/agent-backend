@@ -1,4 +1,10 @@
 # backend/utils/jwt_handler.py
+"""
+JSON Web Token (JWT) issuing and verification utilities.
+
+Handles the creation and validation of JWTs using a secret key and expiration
+settings loaded from environment variables.
+"""
 import jwt
 from datetime import datetime, timedelta
 import os
@@ -11,7 +17,15 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRE_MINUTE
 from typing import Any
 
 def create_jwt_token(user_id: Any):
-    """Create a JWT token for the user"""
+    """
+    Issue a new JWT token for the authenticated user.
+
+    Args:
+        user_id: The unique identifier for the user.
+
+    Returns:
+        str: A signed JWT string containing the user ID and expiration timestamp.
+    """
     payload = {
         "user_id": user_id,
         "exp": datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -20,7 +34,16 @@ def create_jwt_token(user_id: Any):
     return token
 
 def decode_jwt_token(token: str):
-    """Decode and verify JWT token"""
+    """
+    Decode and verify a JWT token's signature and expiration.
+
+    Args:
+        token: The raw JWT string from the authorization header.
+
+    Returns:
+        dict | None: The decoded payload if valid; returns None if the token
+        is expired or invalid rather than raising an exception.
+    """
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         return payload
@@ -30,5 +53,13 @@ def decode_jwt_token(token: str):
         return None
 
 def verify_jwt_token(token: str):
-    """Verify if token is valid"""
+    """
+    Alias for decode_jwt_token to verify if a token is valid.
+
+    Args:
+        token: The raw JWT string.
+
+    Returns:
+        dict | None: The decoded payload, or None if validation fails.
+    """
     return decode_jwt_token(token)

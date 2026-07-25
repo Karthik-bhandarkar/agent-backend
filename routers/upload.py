@@ -1,3 +1,10 @@
+# backend/routers/upload.py
+"""
+Medical report upload routes.
+
+Accepts a PDF medical report, extracts its text using pypdf, and
+stores the extracted text in the user's profile for agents to analyze.
+"""
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from pypdf import PdfReader
 from io import BytesIO
@@ -12,6 +19,19 @@ async def upload_medical_report(
 ):
     """
     Upload a PDF medical report, extract text, and save it to the user's profile.
+
+    Route: POST /upload/report
+
+    Args:
+        user_id: The unique identifier for the user (multipart/form-data).
+        file: The uploaded PDF file (multipart/form-data).
+
+    Returns:
+        dict: A success message and the length of the extracted text.
+
+    Raises:
+        HTTPException(400): if the file is not a PDF or if no text could be extracted.
+        HTTPException(500): if a processing or database error occurs.
     """
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")

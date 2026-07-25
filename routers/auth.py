@@ -1,4 +1,10 @@
 # backend/routers/auth.py
+"""
+Authentication routes: signup and login.
+
+Issues JWTs on successful signup/login and stores hashed passwords via
+utils/password_hash.py. Mounted in main.py under the "/auth" prefix.
+"""
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from database import save_user, get_user_by_email
@@ -21,6 +27,20 @@ class LoginRequest(BaseModel):
 
 @router.post("/signup")
 def signup(req: SignupRequest):
+    """
+    Register a new user and return a JWT.
+
+    Route: POST /auth/signup
+    
+    Args:
+        req: Parsed request body containing `email`, `name`, and `password`.
+
+    Returns:
+        dict: id, email, name, profile_complete (False), signed JWT token, and success message.
+
+    Raises:
+        HTTPException(400): if the email is already registered in the database.
+    """
     existing = get_user_by_email(req.email)
     if existing:
         # keep the same error shape as before
@@ -51,6 +71,20 @@ def signup(req: SignupRequest):
 
 @router.post("/login")
 def login(req: LoginRequest):
+    """
+    Authenticate a user by email + password and return a JWT.
+
+    Route: POST /auth/login
+    
+    Args:
+        req: Parsed request body containing `email` and `password`.
+
+    Returns:
+        dict: id, email, name, profile_complete flag, signed JWT token, and success message.
+
+    Raises:
+        HTTPException(401): if the email doesn't exist or the password doesn't match the hash.
+    """
     user = get_user_by_email(req.email)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")

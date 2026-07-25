@@ -1,7 +1,30 @@
 # backend/orchestrator/orchestrator.py
+"""
+Core control loop for the multi-agent orchestration.
+
+Maintains conversation memory, classifies user intent, and repeatedly invokes
+the supervisor agent to route the query to specialist agents. Results are
+finally synthesized into a Markdown report and logged.
+"""
 
 from typing import Dict
-from langchain.memory import ConversationBufferMemory
+class ConversationBufferMemory:
+    """Lightweight drop-in for langchain ConversationBufferMemory (removed in 0.3.x).
+    Implements the same save_context / load_memory_variables interface used by the orchestrator.
+    """
+    def __init__(self, return_messages: bool = False):
+        self._history: list[str] = []
+
+    def save_context(self, inputs: dict, outputs: dict):
+        human = inputs.get("input", "")
+        ai = outputs.get("output", "")
+        self._history.append(f"Human: {human}")
+        self._history.append(f"AI: {ai}")
+
+    def load_memory_variables(self, _inputs: dict) -> dict:
+        history = "\n".join(self._history) if self._history else "No previous conversation yet."
+        return {"history": history}
+
 from agents.intention_classifier import classify_intent
 from agents.supervisor_agent import supervisor
 from agents.symptom_agent import run_symptom_agent
@@ -22,6 +45,7 @@ _memory_store: Dict[str, ConversationBufferMemory] = {}
 def get_memory(user_id: str) -> ConversationBufferMemory:
     """
     Get or create a LangChain ConversationBufferMemory instance for this user.
+    Maintains a per-user history of chat turns to provide context to the LLM.
     This is the ONLY chat memory used by the LLM for context.
     """
     if user_id not in _memory_store:
@@ -90,10 +114,14 @@ def process_query(user_id: str, message: str):
         # Ask supervisor what to do next, with full context
         next_agent = supervisor(message, profile, state)
 
+        # NOTE: FINISH is the exit condition returned by the supervisor when it
+        # determines no further specialist agents are needed to satisfy the query.
         # If supervisor decides we're done, break loop
         if next_agent == "FINISH":
             break
 
+        # NOTE: Already-used-agent guard. Prevents infinite loops if the
+        # supervisor gets stuck repeatedly recommending the same agent.
         # Avoid calling the same agent multiple times in one turn
         if next_agent in agents_used:
             break
@@ -139,7 +167,13 @@ def process_query(user_id: str, message: str):
 
 def process_query_generator(user_id: str, message: str):
     """
-    Generator version of process_query.
+    The real implementation of the orchestration loop, supporting streaming.
+
+    Classifies user intent, then loops calling the supervisor to pick the next
+    agent (capped at max_steps=8 to avoid infinite loops). Streams progress
+    events for the websocket UI, synthesizes a final answer, and logs the
+    conversation turn to history.
+    
     Yields:
       {"type": "log", "agent": "...", "message": "..."}
       {"type": "final", "response": "...", "agents_used": [...]}
@@ -223,10 +257,14 @@ def process_query_generator(user_id: str, message: str):
         next_agent = supervisor(message, profile, state)
         print(f"DEBUG: Supervisor decided -> {next_agent}")
 
+        # NOTE: FINISH is the exit condition returned by the supervisor when it
+        # determines no further specialist agents are needed to satisfy the query.
         if next_agent == "FINISH":
             yield log_event("Supervisor", "Analysis complete.")
             break
 
+        # NOTE: Already-used-agent guard. Prevents infinite loops if the
+        # supervisor gets stuck repeatedly recommending the same agent.
         if next_agent in agents_used:
              # Prevent infinite loops if Supervisor gets stuck
             yield log_event("Supervisor", f"Skipping {next_agent} (already ran).")
@@ -306,7 +344,11 @@ def process_query_generator(user_id: str, message: str):
 
 def process_query(user_id: str, message: str):
     """
-    Wrapper for process_query_generator to maintain backward compatibility.
+    Synchronous wrapper around the process_query_generator.
+    Kept for backward compatibility with older routers that do not support streaming.
+    (Note: There are two functions because process_query_generator handles the
+    real execution and websocket streaming, while this wrapper allows simple
+    blocking calls from basic REST endpoints).
     """
     gen = process_query_generator(user_id, message)
     final_result = None

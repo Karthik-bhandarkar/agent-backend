@@ -1,4 +1,10 @@
 from fastapi import APIRouter, HTTPException, Request
+"""
+Google OAuth2 authentication routes.
+
+Handles the login redirect and the callback that exchanges the code for a token,
+creating or finding the user, and finally redirecting back to the frontend.
+"""
 from typing import Optional
 from fastapi.responses import RedirectResponse
 from urllib.parse import urlencode
@@ -14,7 +20,17 @@ router = APIRouter(tags=["google-auth"])
 
 @router.get("/auth/google/login")
 def google_login():
-    """Step 1: Send user to Google sign-in page."""
+    """
+    Step 1: Send user to Google sign-in page.
+
+    Route: GET /auth/google/login
+
+    Returns:
+        RedirectResponse: Redirects the user to the Google OAuth2 consent screen.
+
+    Raises:
+        HTTPException(500): if Google OAuth environment variables are missing.
+    """
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
 
@@ -44,7 +60,23 @@ def google_login():
 
 @router.get("/auth/google/callback")
 def google_callback(request: Request, code: Optional[str] = None, error: Optional[str] = None):
-    """Step 2: Google returns here. We get user info and send them back to frontend."""
+    """
+    Step 2: Handle the Google OAuth callback, get user info, and redirect to frontend.
+
+    Route: GET /auth/google/callback
+
+    Args:
+        request: The raw FastAPI request.
+        code: The authorization code returned by Google.
+        error: Any error string returned by Google.
+
+    Returns:
+        RedirectResponse: Redirects to the frontend URL with JWT token and user info,
+        or redirects with an error parameter if authentication fails.
+
+    Raises:
+        HTTPException(400): if the 'code' parameter is missing and no error was provided.
+    """
     
     # CRITICAL: In production, this must be your Render Frontend URL
     FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173")

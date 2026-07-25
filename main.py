@@ -1,4 +1,11 @@
 # backend/main.py
+"""
+FastAPI application entry point.
+
+Initializes the FastAPI application, configures CORS middleware, registers
+all routing endpoints, and provides basic root/health-check endpoints.
+Also serves as the launch script for the uvicorn development server.
+"""
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,9 +14,11 @@ from routers import auth, profile, chat, history, agent_stream, upload
 app = FastAPI()
 
 # --- CORS CONFIGURATION ---
-# We allow ["*"] (all origins) to ensure your deployed frontend can communicate 
-# with the backend without errors. In a strict production environment, 
-# you would replace "*" with your specific frontend URL.
+# NOTE: We allow ["*"] (all origins) to ensure your deployed frontend can communicate 
+# with the backend without errors during initial deployment and local development.
+# The tradeoff is a security risk in production, as any third-party site could 
+# theoretically make requests to this API on a user's behalf. In a strict 
+# production environment, this should be replaced with the exact frontend URL.
 origins = ["*"]
 
 app.add_middleware(
@@ -30,12 +39,25 @@ app.include_router(upload.router)
 
 @app.get("/")
 def root():
+    """
+    Basic root endpoint to verify the API is responsive.
+
+    Route: GET /
+
+    Returns:
+        dict: A simple welcome message.
+    """
     return {"message": "Wellness AI Assistant API is running"}
 
 @app.get("/health")
 def health_check():
     """
-    Health check endpoint for Render to verify the service is up.
+    Health check endpoint for deployment platforms (like Render) to verify the service is up.
+
+    Route: GET /health
+
+    Returns:
+        dict: The health status and a flag indicating JWT configuration presence.
     """
     return {"status": "healthy", "jwt_configured": True}
 

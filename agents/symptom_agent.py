@@ -1,4 +1,12 @@
 # backend/agents/symptom_agent.py
+"""
+Agent responsible for analyzing physical and mental health symptoms.
+
+Reads the user's message and health profile to generate a concise summary
+of potential causes and risk levels. Its output is captured by the
+orchestrator and written into the shared state dictionary under the
+`SymptomAgent` key for downstream agents to reference.
+"""
 
 from typing import Optional
 from langchain_core.prompts import PromptTemplate
@@ -40,7 +48,15 @@ symptom_chain = symptom_prompt | llm | StrOutputParser()
 
 def run_symptom_agent(message: str, profile: Optional[dict]) -> str:
     """
-    Executes the Symptom Agent Chain.
+    Invoke the Symptom Agent LLM chain.
+
+    Args:
+        message: The raw text of the user's input.
+        profile: The user's health profile (metrics, goals, conditions).
+
+    Returns:
+        str: A bulleted list summarizing symptoms, duration, potential
+        causes, and risk level.
     """
     try:
         response = symptom_chain.invoke({

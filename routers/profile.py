@@ -1,3 +1,10 @@
+# backend/routers/profile.py
+"""
+User wellness profile management routes.
+
+Handles creating, updating, and fetching the user's health profile, including
+automatic BMI calculation and normalizing alternate field names (e.g., height vs height_cm).
+"""
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, Any, Dict
@@ -35,10 +42,21 @@ def setup_profile(
     profile_data: ProfileUpdate = None,
 ):
     """
-    Setup user profile.
-    Usage: POST /profile/setup?user_id=<user_id>
-    Body: JSON with profile fields (age, gender, weight_kg, height_cm, diet_type, activity_level, sleep_hours, health_conditions, etc.)
-    If user_id is not provided as query param, you may pass it in the body using the /setup-body endpoint.
+    Create or update a user profile.
+
+    Route: POST /profile/setup
+
+    Args:
+        request: The raw FastAPI request.
+        user_id: User identifier passed as a query parameter.
+        profile_data: JSON body with profile fields.
+
+    Returns:
+        dict: A success message and the updated profile dictionary.
+
+    Raises:
+        HTTPException(400): if `user_id` query parameter is missing.
+        HTTPException(404): if the user is not found in the database.
     """
 
     # Validate presence of user_id
@@ -97,9 +115,19 @@ def setup_profile(
 @router.post("/setup-body")
 def setup_profile_body(data: Dict):
     """
-    Alternative: Accept user_id in body
-    Usage: POST /profile/setup-body
-    Body: {"user_id": "<id>", "age": 25, ...}
+    Create or update a user profile using a single JSON payload.
+
+    Route: POST /profile/setup-body
+
+    Args:
+        data: JSON body containing `user_id` and all profile fields.
+
+    Returns:
+        dict: A success message and the updated profile dictionary.
+
+    Raises:
+        HTTPException(400): if `user_id` is missing from the payload.
+        HTTPException(404): if the user is not found in the database.
     """
     user_id = data.get("user_id")
     if not user_id:
@@ -149,8 +177,18 @@ def setup_profile_body(data: Dict):
 @router.get("/get")
 def get_profile(user_id: str):
     """
-    Fetch user profile from MongoDB
-    Usage: GET /profile/get?user_id=<id>
+    Fetch a user's health profile.
+
+    Route: GET /profile/get
+
+    Args:
+        user_id: User identifier passed as a query parameter.
+
+    Returns:
+        dict: The user's profile data, or a dict with `profile: None` if not set.
+
+    Raises:
+        HTTPException(404): if the user is not found in the database.
     """
     user = get_user_by_id(user_id)
     if not user:
