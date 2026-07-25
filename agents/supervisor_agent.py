@@ -9,15 +9,32 @@ agent to run, or "FINISH" to terminate the loop.
 """
 
 import json
+import re
 from typing import Optional
 from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
+from core.logging_config import get_logger
 from agents.groq_client import get_llm
 
 llm = get_llm()
+logger = get_logger(__name__)
 
-# Define the Output Parser
-parser = JsonOutputParser()
+def extract_json_block(text: str) -> Optional[dict]:
+    """Extract the first JSON object from a string, handling markdown fences."""
+    # Try to find a JSON block between backticks
+    match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+    if match:
+        json_str = match.group(1)
+    else:
+        # Fallback: find the first { ... } block
+        match = re.search(r'(\{.*?\})', text, re.DOTALL)
+        if not match:
+            return None
+        json_str = match.group(1)
+    
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        return None
 
 # Define the Prompt Template
 supervisor_prompt = PromptTemplate(
@@ -54,18 +71,15 @@ SELECTION GUIDELINES (VERY IMPORTANT):
 2. **SPECIFIC REQUESTS**: If user asks for ONE thing (e.g. "Diet plan"), ONLY call that agent -> `FINISH`.
 3. **GENERAL**: Do NOT call the same agent twice. If main need is met, `FINISH`.
 
-OUTPUT FORMAT:
-Return a JSON object with a single key "next_agent".
+OUTPUT FORMAT (STRICT):
+Respond with ONLY the JSON object. No reasoning, no explanation, no markdown fences, no text before or after. Your entire response must be parseable by json.loads() as-is.
 Example: {{"next_agent": "SymptomAgent"}} or {{"next_agent": "FINISH"}}
-
-{format_instructions}
 """,
-    input_variables=["conversation_history", "user_message", "profile", "cleaned_state", "intent"],
-    partial_variables={"format_instructions": parser.get_format_instructions()},
+    input_variables=["conversation_history", "user_message", "profile", "cleaned_state", "intent"]
 )
 
 # Create the Chain
-supervisor_chain = supervisor_prompt | llm | parser
+supervisor_chain = supervisor_prompt | llm
 
 def supervisor(user_message: str, profile: Optional[dict], state: dict) -> str:
     """
@@ -94,19 +108,16 @@ def supervisor(user_message: str, profile: Optional[dict], state: dict) -> str:
             "intent": str(intent)
         })
         
-        # Robust extraction
-        if isinstance(result, dict) and "next_agent" in result:
-            return result["next_agent"]
-        elif isinstance(result, str):
-             # Fallback if parser fails but returns string key
-             if "FINISH" in result: return "FINISH"
-             for agent in ["SymptomAgent", "DietAgent", "FitnessAgent", "LifestyleAgent"]:
-                 if agent in result: return agent
+        # The result from llm without parser is an AIMessage
+        raw_text = result.content
+        parsed_json = extract_json_block(raw_text)
         
-        return "FINISH"
+        if parsed_json and "next_agent" in parsed_json:
+            return parsed_json["next_agent"]
+        else:
+            logger.error(f"Failed to extract valid JSON from Supervisor LLM output. Raw text:\n{raw_text}")
+            return "FINISH"
 
     except Exception as e:
-        # NOTE: JSON parsing failures often end up here when the LLM wraps
-        # its JSON output in verbose text. We default to FINISH to avoid crashing.
-        print(f"DEBUG: Supervisor Error: {e}")
+        logger.error(f"Supervisor Error: {e}")
         return "FINISH"

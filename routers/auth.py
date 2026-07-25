@@ -7,9 +7,8 @@ utils/password_hash.py. Mounted in main.py under the "/auth" prefix.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from database import save_user, get_user_by_email
-from utils.password_hash import hash_password, verify_password
-from utils.jwt_handler import create_jwt_token
+from db.users_repo import save_user, get_user_by_email
+from core.security import hash_password, verify_password, create_jwt_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

@@ -11,10 +11,11 @@ from urllib.parse import urlencode
 import os
 import requests
 
-from database import get_user_by_email, save_user
-from utils.password_hash import hash_password
-# Import jwt_handler at the top level to avoid scope issues
-from utils.jwt_handler import create_jwt_token
+from db.users_repo import get_user_by_email, save_user
+from core.security import hash_password, create_jwt_token
+from core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(tags=["google-auth"])
 
@@ -35,9 +36,9 @@ def google_login():
     GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
 
     # Debug logs for deployment troubleshooting
-    print(f"DEBUG: Starting Google Login.")
-    print(f"DEBUG: Client ID configured: {bool(GOOGLE_CLIENT_ID)}")
-    print(f"DEBUG: Redirect URI configured: {bool(GOOGLE_REDIRECT_URI)}")
+    logger.info(f"DEBUG: Starting Google Login.")
+    logger.info(f"DEBUG: Client ID configured: {bool(GOOGLE_CLIENT_ID)}")
+    logger.info(f"DEBUG: Redirect URI configured: {bool(GOOGLE_REDIRECT_URI)}")
 
     if not GOOGLE_CLIENT_ID or not GOOGLE_REDIRECT_URI:
         raise HTTPException(
@@ -87,7 +88,7 @@ def google_callback(request: Request, code: Optional[str] = None, error: Optiona
 
     # Handle errors returned by Google
     if error:
-        print(f"ERROR: Google returned error: {error}")
+        logger.error(f"ERROR: Google returned error: {error}")
         return RedirectResponse(f"{FRONTEND_BASE_URL}/login?google_error={error}")
 
     if not code:
@@ -106,7 +107,7 @@ def google_callback(request: Request, code: Optional[str] = None, error: Optiona
         token_resp = requests.post("https://oauth2.googleapis.com/token", data=token_data)
         token_resp.raise_for_status() # Raise exception for 4xx/5xx errors
     except requests.exceptions.RequestException as e:
-        print(f"ERROR: Failed to exchange token: {e}")
+        logger.error(f"ERROR: Failed to exchange token: {e}")
         # Return to frontend with error
         return RedirectResponse(f"{FRONTEND_BASE_URL}/login?error=token_exchange_failed")
 

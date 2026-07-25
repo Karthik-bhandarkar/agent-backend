@@ -1,21 +1,24 @@
-# backend/utils/jwt_handler.py
+# backend/core/security.py
 """
-JSON Web Token (JWT) issuing and verification utilities.
-
-Handles the creation and validation of JWTs using a secret key and expiration
-settings loaded from environment variables.
+Security utilities including password hashing and JWT token handling.
 """
+import os
 import jwt
 from datetime import datetime, timedelta
-import os
+from typing import Any
+from passlib.context import CryptContext
 
+# --- JWT Configuration ---
 # Read from .env file
 JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "fallback-key-123")
 ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
-from typing import Any
+# --- Password Hashing Configuration ---
+# Configure the hashing context to use pbkdf2_sha256
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
+# --- JWT Functions ---
 def create_jwt_token(user_id: Any):
     """
     Issue a new JWT token for the authenticated user.
@@ -63,3 +66,29 @@ def verify_jwt_token(token: str):
         dict | None: The decoded payload, or None if validation fails.
     """
     return decode_jwt_token(token)
+
+# --- Password Hashing Functions ---
+def hash_password(password: str):
+    """
+    Securely hash a plaintext password.
+
+    Args:
+        password: The plaintext password string.
+
+    Returns:
+        str: The hashed password string.
+    """
+    return pwd_context.hash(password)
+
+def verify_password(password: str, hash_val: str):
+    """
+    Verify a plaintext password against a stored hash.
+
+    Args:
+        password: The plaintext password entered by the user.
+        hash_val: The secure hash stored in the database.
+
+    Returns:
+        bool: True if the password matches the hash, False otherwise.
+    """
+    return pwd_context.verify(password, hash_val)

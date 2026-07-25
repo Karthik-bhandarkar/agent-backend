@@ -6,7 +6,7 @@ Endpoints to fetch and delete stored conversation turns for a user.
 """
 from fastapi import APIRouter
 from fastapi import APIRouter, HTTPException
-from database import get_conversation_history, delete_conversation_turn
+from db.conversations_repo import get_conversation_history, delete_conversation_turn
 
 router = APIRouter(prefix="/history", tags=["history"])
 
