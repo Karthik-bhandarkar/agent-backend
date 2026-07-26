@@ -9,8 +9,8 @@ from typing import Any
 from passlib.context import CryptContext
 
 # --- JWT Configuration ---
-# Read from .env file
-JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "fallback-key-123")
+# Accepts both JWT_SECRET_KEY and JWT_SECRET (either name works in Render)
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or os.environ.get("JWT_SECRET", "fallback-key-123")
 ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
